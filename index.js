@@ -3,7 +3,7 @@
 
 'use strict'
 const express = require('express')
-const httpErrors = require('http-errors')
+const bodyParser = require('body-parser')
 const mongoose = require('mongoose')
 const dbConfig = require('./includes/db')
 
@@ -42,6 +42,11 @@ module.exports = function main (options, cb) {
 
   // Create the express app
   const app = express()
+  app.use(bodyParser.urlencoded({ extended: true }))
+  app.use(bodyParser.json())
+
+  // Register routes
+  require('./routes/index')(app)
 
   // Boot mongoose
   mongoose.Promise = global.Promise
@@ -53,26 +58,7 @@ module.exports = function main (options, cb) {
     console.log(`Successfully connected to ${dbConfig.url}`)
   }).catch((err) => {
     console.log(`I can't connect ${dbConfig.url}, error message: ${err}`)
-    process.restart()
-  })
-
-  // Register routes
-  require('./routes')(app)
-
-  // Common error handlers
-  app.use(function fourOhFourHandler (req, res, next) {
-    next(httpErrors(404, `Route not found: ${req.url}`))
-  })
-  app.use(function fiveHundredHandler (err, req, res, next) {
-    if (err.status >= 500) {
-      logger.error(err)
-    }
-    res.status(err.status || 500).json({
-      messages: [{
-        code: err.code || 'InternalServerError',
-        message: err.message
-      }]
-    })
+    process.exit()
   })
 
   // Start server
